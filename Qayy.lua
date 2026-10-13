@@ -22,46 +22,25 @@ local AutoBuyShopEnabled = false
 local AutoCandyEnabled = false
 
 ---------------------------------------------------------
--- FUNGSI TELEPORT SMART SEARCH
+-- FUNGSI TELEPORT SAFE
 ---------------------------------------------------------
-local function TeleportToName(possibleNames)
+local function TeleportTo(cframe)
     pcall(function()
         local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
         local hrp = char:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
-
-        local targetPart = nil
-
-        -- Cari Objek di Workspace berdasarkan nama
-        for _, obj in ipairs(workspace:GetDescendants()) do
-            for _, name in ipairs(possibleNames) do
-                if string.lower(obj.Name) == string.lower(name) and (obj:IsA("BasePart") or obj:IsA("Model")) then
-                    targetPart = obj
-                    break
-                end
-            end
-            if targetPart then break end
-        end
-
-        if targetPart then
-            if targetPart:IsA("Model") then
-                local primary = targetPart.PrimaryPart or targetPart:FindFirstChildOfClass("BasePart")
-                if primary then
-                    hrp.CFrame = primary.CFrame * CFrame.new(0, 3, 0)
-                end
-            elseif targetPart:IsA("BasePart") then
-                hrp.CFrame = targetPart.CFrame * CFrame.new(0, 3, 0)
-            end
-        else
-            -- Notifikasi jika lokasi tidak ditemukan di workspace
-            game:GetService("StarterGui"):SetCore("SendNotification", {
-                Title = "qayy script",
-                Text = "Area tidak ditemukan di map saat ini!",
-                Duration = 2
-            })
+        if hrp then
+            hrp.CFrame = cframe
         end
     end)
 end
+
+-- Lokasi CFrame Area Game
+local Locations = {
+    Grades = Vector3.new(0, 10, -100),    -- Koordinat Grades
+    Tower = Vector3.new(150, 10, 0),      -- Koordinat Tower
+    WorldBoss = Vector3.new(-150, 10, 0),  -- Koordinat World Boss Area
+    Traits = Vector3.new(0, 10, 100)      -- Koordinat Traits
+}
 
 ---------------------------------------------------------
 -- ANTI-AFK STABIL
@@ -108,7 +87,7 @@ ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.ResetOnSpawn = false
 
 ---------------------------------------------------------
--- 1. TOMBOL BULAT MINIMIZE (LUFFY)
+-- 1. TOMBOL BULAT MINIMIZE (GAMBAR LUFFY)
 ---------------------------------------------------------
 local LuffyBtn = Instance.new("ImageButton")
 LuffyBtn.Name = "LuffyMinimizeBtn"
@@ -284,6 +263,85 @@ end
 -- HALAMAN TAB & FITUR
 ---------------------------------------------------------
 local MainTabPage = CreateTab("Main")
+local TeleportTabPage = CreateTab("Teleport")
+local UpgradeTabPage = CreateTab("Upgrades")
+local EventTabPage = CreateTab("Events")
+local BossTabPage = CreateTab("World Boss")
+local ShopTabPage = CreateTab("Shop")
+
+-- Tab Default
+tabs[1].Page.Visible = true
+tabs[1].Btn.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+tabs[1].Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+-- TAB 1: Main
+CreateToggle(MainTabPage, "Anti-AFK", AntiAFKEnabled, function(v) AntiAFKEnabled = v end)
+CreateToggle(MainTabPage, "Auto Rebirth", AutoRebirthEnabled, function(v) AutoRebirthEnabled = v end)
+
+-- TAB 2: Teleport
+CreateButton(TeleportTabPage, "Teleport to Grades", function()
+    local target = workspace:FindFirstChild("Grades") or workspace:FindFirstChild("GradesArea")
+    if target and target:IsA("BasePart") then
+        TeleportTo(target.CFrame * CFrame.new(0, 3, 0))
+    else
+        TeleportTo(CFrame.new(Locations.Grades))
+    end
+end)
+
+CreateButton(TeleportTabPage, "Teleport to Tower", function()
+    local target = workspace:FindFirstChild("Tower") or workspace:FindFirstChild("TowerArea")
+    if target and target:IsA("BasePart") then
+        TeleportTo(target.CFrame * CFrame.new(0, 3, 0))
+    else
+        TeleportTo(CFrame.new(Locations.Tower))
+    end
+end)
+
+CreateButton(TeleportTabPage, "Teleport to World Boss", function()
+    local target = workspace:FindFirstChild("WorldBoss") or workspace:FindFirstChild("BossArea")
+    if target and target:IsA("BasePart") then
+        TeleportTo(target.CFrame * CFrame.new(0, 3, 0))
+    else
+        TeleportTo(CFrame.new(Locations.WorldBoss))
+    end
+end)
+
+CreateButton(TeleportTabPage, "Teleport to Traits", function()
+    local target = workspace:FindFirstChild("Traits") or workspace:FindFirstChild("TraitsArea")
+    if target and target:IsA("BasePart") then
+        TeleportTo(target.CFrame * CFrame.new(0, 3, 0))
+    else
+        TeleportTo(CFrame.new(Locations.Traits))
+    end
+end)
+
+-- TAB 3: Upgrades
+CreateToggle(UpgradeTabPage, "Auto Upgrade All", AutoUpgradeEnabled, function(v) AutoUpgradeEnabled = v end)
+
+-- TAB 4: Events
+CandyStormRemote.OnClientEvent:Connect(function(actionType, candyId, itemName, position)
+    if AutoCandyEnabled and actionType == "Drop" and position then
+        pcall(function()
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                char.HumanoidRootPart.CFrame = CFrame.new(position)
+                ActionRemote:FireServer("CollectCandy", candyId)
+            end
+        end)
+    end
+end)
+CreateToggle(EventTabPage, "Auto Candy Storm", AutoCandyEnabled, function(v) AutoCandyEnabled = v end)
+
+-- TAB 5: World Boss
+CreateToggle(BossTabPage, "Auto World Boss", AutoBossEnabled, function(v) AutoBossEnabled = v end)
+
+-- TAB 6: Shop
+CreateToggle(ShopTabPage, "Loop Auto Buy Shop", AutoBuyShopEnabled, function(v) AutoBuyShopEnabled = v end)
+CreateButton(ShopTabPage, "Beli Market (1x Instant)", function()
+    pcall(function()
+        ActionRemote:FireServer("MarketBuyAll")
+    end)
+end)"Main")
 local TeleportTabPage = CreateTab("Teleport")
 local UpgradeTabPage = CreateTab("Upgrades")
 local EventTabPage = CreateTab("Events")
