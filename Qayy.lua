@@ -4,7 +4,7 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local Window = Rayfield:CreateWindow({
    Name = "qayy script | Pet Dice Hub",
    LoadingTitle = "Memuat qayy script...",
-   LoadingSubtitle = "Vertical UI Layout",
+   LoadingSubtitle = "Optimized Mobile Edition",
    ConfigurationSaving = { Enabled = false }
 })
 
@@ -15,14 +15,9 @@ local ActionRemote = PetDiceRemotes:WaitForChild("Action")
 local CandyStormRemote = PetDiceRemotes:WaitForChild("CandyStorm")
 
 ---------------------------------------------------------
--- TAB UTAMA: ALL FEATURES (VERTUKAL / ATAS KE BAWAH)
+-- TAB 1: MAIN & UTILITY (ANTI-AFK & AUTO REBIRTH)
 ---------------------------------------------------------
-local MainTab = Window:CreateTab("Main Menu", 4483345998)
-
----------------------------------------------------------
--- SECTION 1: UTILITY & PROTECTION
----------------------------------------------------------
-MainTab:CreateSection("--- UTILITY & UTAMA ---")
+local MainTab = Window:CreateTab("Main / Utility", 4483345998)
 
 local AntiAFKEnabled = true
 local VirtualUser = game:GetService("VirtualUser")
@@ -40,10 +35,38 @@ MainTab:CreateToggle({
    Flag = "AntiAFKToggle",
    Callback = function(Value)
       AntiAFKEnabled = Value
-      if AntiAFKEnabled then
+   end,
+})
+
+local AutoRebirthEnabled = false
+
+local function startAutoRebirth()
+    while AutoRebirthEnabled do
+        pcall(function()
+            ActionRemote:FireServer("Rebirth")
+        end)
+        task.wait(2)
+    end
+end
+
+MainTab:CreateToggle({
+   Name = "Auto Rebirth (On/Off)",
+   CurrentValue = false,
+   Flag = "AutoRebirthToggle",
+   Callback = function(Value)
+      AutoRebirthEnabled = Value
+      if AutoRebirthEnabled then
           Rayfield:Notify({
              Title = "qayy script",
-             Content = "Anti-AFK Aktif!",
+             Content = "Auto Rebirth Aktif!",
+             Duration = 2,
+             Image = 4483345998,
+          })
+          task.spawn(startAutoRebirth)
+      else
+          Rayfield:Notify({
+             Title = "qayy script",
+             Content = "Auto Rebirth Dimatikan.",
              Duration = 2,
              Image = 4483345998,
           })
@@ -51,25 +74,46 @@ MainTab:CreateToggle({
    end,
 })
 
-MainTab:CreateButton({
-   Name = "Equip Best (Pakai Best Pet/Dice)",
-   Callback = function()
-      pcall(function()
-          ActionRemote:FireServer("EquipBest")
+---------------------------------------------------------
+-- TAB 2: AUTO UPGRADES
+---------------------------------------------------------
+local UpgradeTab = Window:CreateTab("Auto Upgrades", 4483345998)
+
+local AutoUpgradeEnabled = false
+
+local function startAutoUpgrade()
+    while AutoUpgradeEnabled do
+        pcall(function()
+            ActionRemote:FireServer("BuyAllUpgrades")
+            ActionRemote:FireServer("Funnel", "UpgradeTree", 1, nil)
+            ActionRemote:FireServer("Funnel", "Dice", 1, nil)
+        end)
+        task.wait(1.5)
+    end
+end
+
+UpgradeTab:CreateToggle({
+   Name = "Auto Upgrade All (Buy All & Tree)",
+   CurrentValue = false,
+   Flag = "AutoUpgradeToggle",
+   Callback = function(Value)
+      AutoUpgradeEnabled = Value
+      if AutoUpgradeEnabled then
           Rayfield:Notify({
              Title = "qayy script",
-             Content = "Berhasil memakai equipment terbaik!",
+             Content = "Auto Upgrade Aktif!",
              Duration = 2,
              Image = 4483345998,
           })
-      end)
+          task.spawn(startAutoUpgrade)
+      end
    end,
 })
 
 ---------------------------------------------------------
--- SECTION 2: CANDY STORM EVENT
+-- TAB 3: CANDY STORM EVENT
 ---------------------------------------------------------
-MainTab:CreateSection("--- CANDY STORM EVENT ---")
+local EventTab = Window:CreateTab("Candy Storm", 4483345998)
 
 local AutoCandyEnabled = false
 
@@ -82,14 +126,6 @@ CandyStormRemote.OnClientEvent:Connect(function(actionType, candyId, itemName, p
             
             if hrp then
                 hrp.CFrame = CFrame.new(position)
-                
-                Rayfield:Notify({
-                   Title = "qayy script",
-                   Content = "Mengambil " .. tostring(itemName) .. "!",
-                   Duration = 1.5,
-                   Image = 4483345998,
-                })
-
                 ActionRemote:FireServer("CollectCandy", candyId)
                 ActionRemote:FireServer("CollectItem", candyId)
             end
@@ -97,7 +133,7 @@ CandyStormRemote.OnClientEvent:Connect(function(actionType, candyId, itemName, p
     end
 end)
 
-MainTab:CreateToggle({
+EventTab:CreateToggle({
    Name = "Auto Collect Candy Storm",
    CurrentValue = false,
    Flag = "AutoCandyToggle",
@@ -107,9 +143,9 @@ MainTab:CreateToggle({
 })
 
 ---------------------------------------------------------
--- SECTION 3: WORLD BOSS
+-- TAB 4: WORLD BOSS
 ---------------------------------------------------------
-MainTab:CreateSection("--- WORLD BOSS ---")
+local BossTab = Window:CreateTab("World Boss", 4483345998)
 
 local AutoBossEnabled = false
 
@@ -122,7 +158,7 @@ local function startAutoBoss()
     end
 end
 
-MainTab:CreateToggle({
+BossTab:CreateToggle({
    Name = "Auto Join World Boss",
    CurrentValue = false,
    Flag = "AutoBossToggle",
@@ -135,125 +171,74 @@ MainTab:CreateToggle({
 })
 
 ---------------------------------------------------------
--- SECTION 4: AUTO CLAIM & UPGRADES
+-- TAB 5: MARKET & SHOP (LOOP AUTO BUY)
 ---------------------------------------------------------
-MainTab:CreateSection("--- AUTO CLAIM & UPGRADE ---")
+local ShopTab = Window:CreateTab("Market & Shop", 4483345998)
 
-local AutoClaimEnabled = false
-local AutoUpgradeEnabled = false
+local AutoBuyShopEnabled = false
+local BuyInterval = 2 -- Jeda waktu per loop dalam detik
 
-local function startAutoClaim()
-    while AutoClaimEnabled do
-        pcall(function()
-            -- Daily & Weekly Quest Claim
-            ActionRemote:FireServer("QuestClaim", "Daily", 1)
-            ActionRemote:FireServer("QuestClaim", "Weekly", 1)
-            
-            -- Goals Claim (Halloween & Infinity25)
-            ActionRemote:FireServer("HalloweenGoalClaim", "Minutes")
-            ActionRemote:FireServer("GoalClaim", "infinity25")
-            
-            -- Playtime Rewards Claim (Slot 1-12)
-            for i = 1, 12 do
-                ActionRemote:FireServer("ClaimPlaytime", i)
-            end
-        end)
-        task.wait(5)
-    end
-end
-
-local function startAutoUpgrade()
-    while AutoUpgradeEnabled do
-        pcall(function()
-            ActionRemote:FireServer("Funnel", "UpgradeTree", 1, nil)
-            ActionRemote:FireServer("Funnel", "Dice", 1, nil)
-        end)
-        task.wait(3)
-    end
-end
-
-MainTab:CreateToggle({
-   Name = "Auto Claim All (Daily, Weekly, Goals, Playtime)",
-   CurrentValue = false,
-   Flag = "AutoClaimToggle",
-   Callback = function(Value)
-      AutoClaimEnabled = Value
-      if AutoClaimEnabled then
-          task.spawn(startAutoClaim)
-      end
-   end,
-})
-
-MainTab:CreateToggle({
-   Name = "Auto Upgrade (Tree & Dice)",
-   CurrentValue = false,
-   Flag = "AutoUpgradeToggle",
-   Callback = function(Value)
-      AutoUpgradeEnabled = Value
-      if AutoUpgradeEnabled then
-          task.spawn(startAutoUpgrade)
-      end
-   end,
-})
-
-MainTab:CreateButton({
-   Name = "Rebirth Instant (1x)",
-   Callback = function()
-      pcall(function()
-          ActionRemote:FireServer("Funnel", "Rebirth", 2, nil)
-      end)
-   end,
-})
-
----------------------------------------------------------
--- SECTION 5: MARKET & SHOP
----------------------------------------------------------
-MainTab:CreateSection("--- MARKET & SHOP ---")
-
-local AutoBuyAllEnabled = false
-
-local function startAutoBuyAll()
-    while AutoBuyAllEnabled do
+local function startAutoBuyShop()
+    while AutoBuyShopEnabled do
         pcall(function()
             ActionRemote:FireServer("MarketBuyAll")
         end)
-        task.wait(2)
+        task.wait(BuyInterval)
     end
 end
 
-MainTab:CreateButton({
-   Name = "Beli Semua Item Market (1x)",
-   Callback = function()
-      pcall(function()
-          ActionRemote:FireServer("MarketBuyAll")
+ShopTab:CreateToggle({
+   Name = "Loop Auto Buy Shop (On/Off)",
+   CurrentValue = false,
+   Flag = "LoopAutoBuyToggle",
+   Callback = function(Value)
+      AutoBuyShopEnabled = Value
+      if AutoBuyShopEnabled then
           Rayfield:Notify({
              Title = "qayy script",
-             Content = "Market Buy All terisi!",
+             Content = "Loop Auto Buy Shop Aktif!",
              Duration = 2,
              Image = 4483345998,
           })
-      end)
-   end,
-})
-
-MainTab:CreateToggle({
-   Name = "Auto Buy All Market (Loop)",
-   CurrentValue = false,
-   Flag = "AutoBuyAllToggle",
-   Callback = function(Value)
-      AutoBuyAllEnabled = Value
-      if AutoBuyAllEnabled then
-          task.spawn(startAutoBuyAll)
+          task.spawn(startAutoBuyShop)
+      else
+          Rayfield:Notify({
+             Title = "qayy script",
+             Content = "Loop Auto Buy Shop Dimatikan.",
+             Duration = 2,
+             Image = 4483345998,
+          })
       end
    end,
 })
 
+ShopTab:CreateSlider({
+   Name = "Kecepatan Loop (Detik)",
+   Range = {1, 30},
+   Increment = 1,
+   Suffix = "Detik",
+   CurrentValue = 2,
+   Flag = "ShopLoopIntervalSlider",
+   Callback = function(Value)
+      BuyInterval = Value
+   end,
+})
+
+ShopTab:CreateButton({
+   Name = "Beli Semua Item Market (1x Instant)",
+   Callback = function()
+      pcall(function()
+          ActionRemote:FireServer("MarketBuyAll")
+      end)
+   end,
+})
+
 ---------------------------------------------------------
--- NOTIFIKASI
+-- NOTIFIKASI SCRIPT SIAP
 ---------------------------------------------------------
 Rayfield:Notify({
-   Title = "qayy script Dimuat!",
-   Content = "Weekly Quest & Infinity25 Goal sudah ditambahkan.",
+   Title = "qayy script Siap!",
+   Content = "Loop Auto Buy Shop berhasil dipasang.",
    Duration = 4,
    Image = 4483345998,
 })
