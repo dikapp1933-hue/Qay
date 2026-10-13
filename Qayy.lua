@@ -8,12 +8,20 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VirtualUser = game:GetService("VirtualUser")
 local LocalPlayer = Players.LocalPlayer
 
--- Remote Events Game
-local PetDiceRemotes = ReplicatedStorage:WaitForChild("PetDice"):WaitForChild("Remotes")
-local ActionRemote = PetDiceRemotes:WaitForChild("Action")
-local CandyStormRemote = PetDiceRemotes:WaitForChild("CandyStorm")
+-- Safely Find Remotes (Mencegah Infinite Yield / Script Macet)
+local ActionRemote, CandyStormRemote
+pcall(function()
+    local PetDiceFolder = ReplicatedStorage:FindFirstChild("PetDice")
+    if PetDiceFolder then
+        local Remotes = PetDiceFolder:FindFirstChild("Remotes")
+        if Remotes then
+            ActionRemote = Remotes:FindFirstChild("Action")
+            CandyStormRemote = Remotes:FindFirstChild("CandyStorm")
+        end
+    end
+end)
 
--- Status Variabel (Toggle State)
+-- Status Variabel
 local AntiAFKEnabled = true
 local AutoRebirthEnabled = false
 local AutoUpgradeEnabled = false
@@ -21,13 +29,9 @@ local AutoBossEnabled = false
 local AutoBuyShopEnabled = false
 local AutoCandyEnabled = false
 
--- ATUR KEY KAMU DI SINI
-local CORRECT_KEY = "qayy2026" 
-
 ---------------------------------------------------------
--- ANTI-AFK SUPER WORK (PHYSICAL MICRO-MOVEMENT)
+-- ANTI-AFK STABIL
 ---------------------------------------------------------
--- 1. Handling Event Idled Standard
 LocalPlayer.Idled:Connect(function()
     if AntiAFKEnabled then
         pcall(function()
@@ -37,17 +41,13 @@ LocalPlayer.Idled:Connect(function()
     end
 end)
 
--- 2. Anti-AFK Active Movement Loop (Berjalan tiap 60 detik)
 task.spawn(function()
-    while true do
-        task.wait(60)
+    while task.wait(60) do
         if AntiAFKEnabled then
             pcall(function()
                 local char = LocalPlayer.Character
                 if char and char:FindFirstChild("HumanoidRootPart") then
-                    -- Menggeser posisi karakter 0.1 stud & memutar kamera sedikit (server membaca ini sebagai gerakan pemain asli)
-                    local hrp = char.HumanoidRootPart
-                    hrp.CFrame = hrp.CFrame * CFrame.new(0, 0, 0.01) * CFrame.Angles(0, math.rad(1), 0)
+                    char.HumanoidRootPart.CFrame = char.HumanoidRootPart.CFrame * CFrame.new(0, 0.05, 0)
                 end
             end)
         end
@@ -55,24 +55,26 @@ task.spawn(function()
 end)
 
 ---------------------------------------------------------
--- CENTRAL LOOP (RINGAN)
+-- CENTRAL LOOP (2.5 DETIK)
 ---------------------------------------------------------
 task.spawn(function()
     while true do
         task.wait(2.5)
         pcall(function()
-            if AutoUpgradeEnabled then
-                ActionRemote:FireServer("BuyAllUpgrades")
-                ActionRemote:FireServer("Funnel", "UpgradeTree", 1, nil)
-            end
-            if AutoRebirthEnabled then
-                ActionRemote:FireServer("Rebirth")
-            end
-            if AutoBossEnabled then
-                ActionRemote:FireServer("WorldBossJoin")
-            end
-            if AutoBuyShopEnabled then
-                ActionRemote:FireServer("MarketBuyAll")
+            if ActionRemote then
+                if AutoUpgradeEnabled then
+                    ActionRemote:FireServer("BuyAllUpgrades")
+                    ActionRemote:FireServer("Funnel", "UpgradeTree", 1, nil)
+                end
+                if AutoRebirthEnabled then
+                    ActionRemote:FireServer("Rebirth")
+                end
+                if AutoBossEnabled then
+                    ActionRemote:FireServer("WorldBossJoin")
+                end
+                if AutoBuyShopEnabled then
+                    ActionRemote:FireServer("MarketBuyAll")
+                end
             end
         end)
     end
@@ -120,76 +122,7 @@ ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.ResetOnSpawn = false
 
 ---------------------------------------------------------
--- 1. KEY SYSTEM FRAME
----------------------------------------------------------
-local KeyFrame = Instance.new("Frame")
-KeyFrame.Name = "KeyFrame"
-KeyFrame.Parent = ScreenGui
-KeyFrame.Size = UDim2.new(0, 300, 0, 180)
-KeyFrame.Position = UDim2.new(0.5, -150, 0.5, -90)
-KeyFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-KeyFrame.BorderSizePixel = 0
-KeyFrame.Active = true
-KeyFrame.Draggable = true
-
-local CornerKey = Instance.new("UICorner", KeyFrame)
-CornerKey.CornerRadius = UDim.new(0, 10)
-
-local KeyTitle = Instance.new("TextLabel")
-KeyTitle.Parent = KeyFrame
-KeyTitle.Size = UDim2.new(1, 0, 0, 40)
-KeyTitle.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-KeyTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-KeyTitle.Text = "  qayy script | Key System"
-KeyTitle.TextSize = 14
-KeyTitle.Font = Enum.Font.SourceSansBold
-KeyTitle.TextXAlignment = Enum.TextXAlignment.Left
-
-local CornerKeyTitle = Instance.new("UICorner", KeyTitle)
-CornerKeyTitle.CornerRadius = UDim.new(0, 10)
-
-local KeyTextBox = Instance.new("TextBox")
-KeyTextBox.Parent = KeyFrame
-KeyTextBox.Size = UDim2.new(0, 260, 0, 40)
-KeyTextBox.Position = UDim2.new(0.5, -130, 0, 55)
-KeyTextBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-KeyTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-KeyTextBox.PlaceholderText = "Masukkan Key di sini..."
-KeyTextBox.Text = ""
-KeyTextBox.TextSize = 14
-KeyTextBox.Font = Enum.Font.SourceSans
-
-local CornerBox = Instance.new("UICorner", KeyTextBox)
-CornerBox.CornerRadius = UDim.new(0, 6)
-
-local SubmitBtn = Instance.new("TextButton")
-SubmitBtn.Parent = KeyFrame
-SubmitBtn.Size = UDim2.new(0, 125, 0, 35)
-SubmitBtn.Position = UDim2.new(0.5, -130, 0, 115)
-SubmitBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
-SubmitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-SubmitBtn.Text = "Submit Key"
-SubmitBtn.TextSize = 13
-SubmitBtn.Font = Enum.Font.SourceSansBold
-
-local CornerSubmit = Instance.new("UICorner", SubmitBtn)
-CornerSubmit.CornerRadius = UDim.new(0, 6)
-
-local GetKeyBtn = Instance.new("TextButton")
-GetKeyBtn.Parent = KeyFrame
-GetKeyBtn.Size = UDim2.new(0, 125, 0, 35)
-GetKeyBtn.Position = UDim2.new(0.5, 5, 0, 115)
-GetKeyBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-GetKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-GetKeyBtn.Text = "Get Key"
-GetKeyBtn.TextSize = 13
-GetKeyBtn.Font = Enum.Font.SourceSansBold
-
-local CornerGet = Instance.new("UICorner", GetKeyBtn)
-CornerGet.CornerRadius = UDim.new(0, 6)
-
----------------------------------------------------------
--- 2. TOMBOL BULAT MINIMIZE (LUFFY) & MAIN FRAME
+-- 1. TOMBOL BULAT MINIMIZE (LUFFY)
 ---------------------------------------------------------
 local LuffyBtn = Instance.new("ImageButton")
 LuffyBtn.Name = "LuffyMinimizeBtn"
@@ -209,6 +142,9 @@ local StrokeLuffy = Instance.new("UIStroke", LuffyBtn)
 StrokeLuffy.Color = Color3.fromRGB(255, 255, 255)
 StrokeLuffy.Thickness = 2
 
+---------------------------------------------------------
+-- 2. FRAME UTAMA SCRIPT (LANGSUNG TERBUKA)
+---------------------------------------------------------
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
@@ -218,7 +154,7 @@ MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
-MainFrame.Visible = false
+MainFrame.Visible = true -- Langsung aktif tanpa key
 
 local CornerFrame = Instance.new("UICorner", MainFrame)
 CornerFrame.CornerRadius = UDim.new(0, 10)
@@ -259,21 +195,6 @@ LuffyBtn.MouseButton1Click:Connect(function()
     LuffyBtn.Visible = false
 end)
 
-SubmitBtn.MouseButton1Click:Connect(function()
-    if KeyTextBox.Text == CORRECT_KEY then
-        KeyFrame:Destroy()
-        MainFrame.Visible = true
-    else
-        KeyTextBox.Text = ""
-        KeyTextBox.PlaceholderText = "Key Salah! Coba lagi."
-    end
-end)
-
-GetKeyBtn.MouseButton1Click:Connect(function()
-    setclipboard("https://pastebin.com/")
-    KeyTextBox.PlaceholderText = "Link tersalin ke clipboard!"
-end)
-
 ---------------------------------------------------------
 -- SISTEM TAB & KONTEN MENU UTAMA
 ---------------------------------------------------------
@@ -285,6 +206,37 @@ TabBar.BackgroundTransparency = 1
 
 local TabListLayout = Instance.new("UIListLayout", TabBar)
 TabListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+TabListLayout.Padding = UDim.new(0, 5)
+
+local Container = Instance.new("Frame")
+Container.Parent = MainFrame
+Container.Size = UDim2.new(1, -105, 1, -45)
+Container.Position = UDim2.new(0, 100, 0, 40)
+Container.BackgroundTransparency = 1
+
+local tabs = {}
+
+local function CreateTab(name)
+    local TabButton = Instance.new("TextButton")
+    TabButton.Parent = TabBar
+    TabButton.Size = UDim2.new(1, 0, 0, 30)
+    TabButton.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    TabButton.TextColor3 = Color3.fromRGB(200, 200, 200)
+    TabButton.Text = name
+    TabButton.TextSize = 12
+    TabButton.Font = Enum.Font.SourceSans
+    
+    local CornerTab = Instance.new("UICorner", TabButton)
+    CornerTab.CornerRadius = UDim.new(0, 6)
+
+    local TabPage = Instance.new("ScrollingFrame")
+    TabPage.Parent = Container
+    TabPage.Size = UDim2.new(1, 0, 1, 0)
+    TabPage.BackgroundTransparency = 1
+    TabPage.Visible = false
+    TabPage.ScrollBarThickness = 4
+    
+    local PageList = Instance.newortOrder = Enum.SortOrder.LayoutOrder
 TabListLayout.Padding = UDim.new(0, 5)
 
 local Container = Instance.new("Frame")
