@@ -8,12 +8,20 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VirtualUser = game:GetService("VirtualUser")
 local LocalPlayer = Players.LocalPlayer
 
--- Remote Events Game
-local PetDiceRemotes = ReplicatedStorage:WaitForChild("PetDice"):WaitForChild("Remotes")
-local ActionRemote = PetDiceRemotes:WaitForChild("Action")
-local CandyStormRemote = PetDiceRemotes:WaitForChild("CandyStorm")
+-- Safely Find Remotes (Mencegah Infinite Yield / Script Macet)
+local ActionRemote, CandyStormRemote
+pcall(function()
+    local PetDiceFolder = ReplicatedStorage:FindFirstChild("PetDice")
+    if PetDiceFolder then
+        local Remotes = PetDiceFolder:FindFirstChild("Remotes")
+        if Remotes then
+            ActionRemote = Remotes:FindFirstChild("Action")
+            CandyStormRemote = Remotes:FindFirstChild("CandyStorm")
+        end
+    end
+end)
 
--- Status Variabel (Toggle State)
+-- Status Variabel
 local AntiAFKEnabled = true
 local AutoRebirthEnabled = false
 local AutoUpgradeEnabled = false
@@ -33,29 +41,77 @@ LocalPlayer.Idled:Connect(function()
     end
 end)
 
+task.spawn(function()
+    while task.wait(60) do
+        if AntiAFKEnabled then
+            pcall(function()
+                local char = LocalPlayer.Character
+                if char and char:FindFirstChild("HumanoidRootPart") then
+                    char.HumanoidRootPart.CFrame = char.HumanoidRootPart.CFrame * CFrame.new(0, 0.05, 0)
+                end
+            end)
+        end
+    end
+end)
+
 ---------------------------------------------------------
--- CENTRAL LOOP (RINGAN)
+-- CENTRAL LOOP (2.5 DETIK)
 ---------------------------------------------------------
 task.spawn(function()
     while true do
         task.wait(2.5)
         pcall(function()
-            if AutoUpgradeEnabled then
-                ActionRemote:FireServer("BuyAllUpgrades")
-                ActionRemote:FireServer("Funnel", "UpgradeTree", 1, nil)
-            end
-            if AutoRebirthEnabled then
-                ActionRemote:FireServer("Rebirth")
-            end
-            if AutoBossEnabled then
-                ActionRemote:FireServer("WorldBossJoin")
-            end
-            if AutoBuyShopEnabled then
-                ActionRemote:FireServer("MarketBuyAll")
+            if ActionRemote then
+                if AutoUpgradeEnabled then
+                    ActionRemote:FireServer("BuyAllUpgrades")
+                    ActionRemote:FireServer("Funnel", "UpgradeTree", 1, nil)
+                end
+                if AutoRebirthEnabled then
+                    ActionRemote:FireServer("Rebirth")
+                end
+                if AutoBossEnabled then
+                    ActionRemote:FireServer("WorldBossJoin")
+                end
+                if AutoBuyShopEnabled then
+                    ActionRemote:FireServer("MarketBuyAll")
+                end
             end
         end)
     end
 end)
+
+---------------------------------------------------------
+-- FUNGSI TELEPORT SMART SEARCH
+---------------------------------------------------------
+local function TeleportToName(possibleNames)
+    pcall(function()
+        local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+
+        local targetPart = nil
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            for _, name in ipairs(possibleNames) do
+                if string.lower(obj.Name) == string.lower(name) and (obj:IsA("BasePart") or obj:IsA("Model")) then
+                    targetPart = obj
+                    break
+                end
+            end
+            if targetPart then break end
+        end
+
+        if targetPart then
+            if targetPart:IsA("Model") then
+                local primary = targetPart.PrimaryPart or targetPart:FindFirstChildOfClass("BasePart")
+                if primary then
+                    hrp.CFrame = primary.CFrame * CFrame.new(0, 3, 0)
+                end
+            elseif targetPart:IsA("BasePart") then
+                hrp.CFrame = targetPart.CFrame * CFrame.new(0, 3, 0)
+            end
+        end
+    end)
+end
 
 ---------------------------------------------------------
 -- SCREENGUI UTAMA
@@ -66,28 +122,28 @@ ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.ResetOnSpawn = false
 
 ---------------------------------------------------------
--- 1. TOMBOL BULAT MINIMIZE (GAMBAR LUFFY)
+-- 1. TOMBOL BULAT MINIMIZE (LUFFY)
 ---------------------------------------------------------
 local LuffyBtn = Instance.new("ImageButton")
 LuffyBtn.Name = "LuffyMinimizeBtn"
 LuffyBtn.Parent = ScreenGui
 LuffyBtn.Size = UDim2.new(0, 50, 0, 50)
 LuffyBtn.Position = UDim2.new(0.05, 0, 0.2, 0)
-LuffyBtn.Image = "rbxassetid://13838423223" -- ID Gambar Luffy
+LuffyBtn.Image = "rbxassetid://13838423223"
 LuffyBtn.BackgroundTransparency = 1
 LuffyBtn.Active = true
-LuffyBtn.Draggable = true -- Bisa digeser di layar HP
-LuffyBtn.Visible = false -- Tersembunyi saat menu terbuka
+LuffyBtn.Draggable = true
+LuffyBtn.Visible = false
 
 local CornerLuffy = Instance.new("UICorner", LuffyBtn)
-CornerLuffy.CornerRadius = UDim.new(1, 0) -- Lingkaran Sempurna
+CornerLuffy.CornerRadius = UDim.new(1, 0)
 
 local StrokeLuffy = Instance.new("UIStroke", LuffyBtn)
 StrokeLuffy.Color = Color3.fromRGB(255, 255, 255)
 StrokeLuffy.Thickness = 2
 
 ---------------------------------------------------------
--- 2. FRAME UTAMA SCRIPT
+-- 2. FRAME UTAMA SCRIPT (LANGSUNG TERBUKA)
 ---------------------------------------------------------
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
@@ -98,11 +154,11 @@ MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
+MainFrame.Visible = true -- Langsung aktif tanpa key
 
 local CornerFrame = Instance.new("UICorner", MainFrame)
 CornerFrame.CornerRadius = UDim.new(0, 10)
 
--- Header / Judul
 local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Parent = MainFrame
 TitleLabel.Size = UDim2.new(1, -40, 0, 35)
@@ -116,7 +172,6 @@ TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 local CornerTitle = Instance.new("UICorner", TitleLabel)
 CornerTitle.CornerRadius = UDim.new(0, 10)
 
--- Tombol Minimize (-)
 local MinimizeBtn = Instance.new("TextButton")
 MinimizeBtn.Parent = MainFrame
 MinimizeBtn.Size = UDim2.new(0, 35, 0, 35)
@@ -130,7 +185,6 @@ MinimizeBtn.Font = Enum.Font.SourceSansBold
 local CornerMinimize = Instance.new("UICorner", MinimizeBtn)
 CornerMinimize.CornerRadius = UDim.new(0, 8)
 
--- Logika Buka / Tutup / Minimize
 MinimizeBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = false
     LuffyBtn.Visible = true
@@ -142,7 +196,7 @@ LuffyBtn.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------------------------------------
--- SISTEM TAB VERTIKAL
+-- SISTEM TAB & KONTEN MENU UTAMA
 ---------------------------------------------------------
 local TabBar = Instance.new("Frame")
 TabBar.Parent = MainFrame
@@ -239,48 +293,47 @@ local function CreateButton(parent, text, callback)
     Btn.MouseButton1Click:Connect(callback)
 end
 
----------------------------------------------------------
--- HALAMAN TAB & FITUR
----------------------------------------------------------
+-- Hal Tab & Fitur
 local MainTabPage = CreateTab("Main")
+local TeleportTabPage = CreateTab("Teleport")
 local UpgradeTabPage = CreateTab("Upgrades")
 local EventTabPage = CreateTab("Events")
 local BossTabPage = CreateTab("World Boss")
 local ShopTabPage = CreateTab("Shop")
 
--- Tab Default
 tabs[1].Page.Visible = true
 tabs[1].Btn.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
 tabs[1].Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
 
--- TAB 1: Main
 CreateToggle(MainTabPage, "Anti-AFK", AntiAFKEnabled, function(v) AntiAFKEnabled = v end)
 CreateToggle(MainTabPage, "Auto Rebirth", AutoRebirthEnabled, function(v) AutoRebirthEnabled = v end)
 
--- TAB 2: Upgrades
+CreateButton(TeleportTabPage, "Teleport to Grades", function() TeleportToName({"Grade", "Grades", "GradeMachine"}) end)
+CreateButton(TeleportTabPage, "Teleport to Tower", function() TeleportToName({"Tower", "Towers", "TowerEntrance"}) end)
+CreateButton(TeleportTabPage, "Teleport to WorldBoss", function() TeleportToName({"WorldBoss", "Boss", "BossPortal"}) end)
+CreateButton(TeleportTabPage, "Teleport to Traits", function() TeleportToName({"Trait", "Traits", "TraitMachine"}) end)
+
 CreateToggle(UpgradeTabPage, "Auto Upgrade All", AutoUpgradeEnabled, function(v) AutoUpgradeEnabled = v end)
 
--- TAB 3: Events
-CandyStormRemote.OnClientEvent:Connect(function(actionType, candyId, itemName, position)
-    if AutoCandyEnabled and actionType == "Drop" and position then
-        pcall(function()
-            local char = LocalPlayer.Character
-            if char and char:FindFirstChild("HumanoidRootPart") then
-                char.HumanoidRootPart.CFrame = CFrame.new(position)
-                ActionRemote:FireServer("CollectCandy", candyId)
-            end
-        end)
-    end
-end)
+if CandyStormRemote then
+    CandyStormRemote.OnClientEvent:Connect(function(actionType, candyId, itemName, position)
+        if AutoCandyEnabled and actionType == "Drop" and position then
+            pcall(function()
+                local char = LocalPlayer.Character
+                if char and char:FindFirstChild("HumanoidRootPart") then
+                    char.HumanoidRootPart.CFrame = CFrame.new(position)
+                    if ActionRemote then ActionRemote:FireServer("CollectCandy", candyId) end
+                end
+            end)
+        end
+    end)
+end
+
 CreateToggle(EventTabPage, "Auto Candy Storm", AutoCandyEnabled, function(v) AutoCandyEnabled = v end)
-
--- TAB 4: World Boss
 CreateToggle(BossTabPage, "Auto World Boss", AutoBossEnabled, function(v) AutoBossEnabled = v end)
-
--- TAB 5: Shop
 CreateToggle(ShopTabPage, "Loop Auto Buy Shop", AutoBuyShopEnabled, function(v) AutoBuyShopEnabled = v end)
 CreateButton(ShopTabPage, "Beli Market (1x Instant)", function()
     pcall(function()
-        ActionRemote:FireServer("MarketBuyAll")
+        if ActionRemote then ActionRemote:FireServer("MarketBuyAll") end
     end)
 end)
