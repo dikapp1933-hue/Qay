@@ -2,7 +2,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "qayy script | Pet Dice Hub",
+   Name = "PET DICD | QAY Hub",
    LoadingTitle = "Memuat qayy script...",
    LoadingSubtitle = "Optimized Mobile Edition",
    ConfigurationSaving = { Enabled = false }
