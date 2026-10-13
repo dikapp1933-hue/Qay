@@ -22,27 +22,6 @@ local AutoBuyShopEnabled = false
 local AutoCandyEnabled = false
 
 ---------------------------------------------------------
--- FUNGSI TELEPORT SAFE
----------------------------------------------------------
-local function TeleportTo(cframe)
-    pcall(function()
-        local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            hrp.CFrame = cframe
-        end
-    end)
-end
-
--- Lokasi CFrame Area Game
-local Locations = {
-    Grades = Vector3.new(0, 10, -100),    -- Koordinat Grades
-    Tower = Vector3.new(150, 10, 0),      -- Koordinat Tower
-    WorldBoss = Vector3.new(-150, 10, 0),  -- Koordinat World Boss Area
-    Traits = Vector3.new(0, 10, 100)      -- Koordinat Traits
-}
-
----------------------------------------------------------
 -- ANTI-AFK STABIL
 ---------------------------------------------------------
 LocalPlayer.Idled:Connect(function()
@@ -94,14 +73,14 @@ LuffyBtn.Name = "LuffyMinimizeBtn"
 LuffyBtn.Parent = ScreenGui
 LuffyBtn.Size = UDim2.new(0, 50, 0, 50)
 LuffyBtn.Position = UDim2.new(0.05, 0, 0.2, 0)
-LuffyBtn.Image = "rbxassetid://13838423223"
+LuffyBtn.Image = "rbxassetid://13838423223" -- ID Gambar Luffy
 LuffyBtn.BackgroundTransparency = 1
 LuffyBtn.Active = true
-LuffyBtn.Draggable = true
-LuffyBtn.Visible = false
+LuffyBtn.Draggable = true -- Bisa digeser di layar HP
+LuffyBtn.Visible = false -- Tersembunyi saat menu terbuka
 
 local CornerLuffy = Instance.new("UICorner", LuffyBtn)
-CornerLuffy.CornerRadius = UDim.new(1, 0)
+CornerLuffy.CornerRadius = UDim.new(1, 0) -- Lingkaran Sempurna
 
 local StrokeLuffy = Instance.new("UIStroke", LuffyBtn)
 StrokeLuffy.Color = Color3.fromRGB(255, 255, 255)
@@ -151,6 +130,7 @@ MinimizeBtn.Font = Enum.Font.SourceSansBold
 local CornerMinimize = Instance.new("UICorner", MinimizeBtn)
 CornerMinimize.CornerRadius = UDim.new(0, 8)
 
+-- Logika Buka / Tutup / Minimize
 MinimizeBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = false
     LuffyBtn.Visible = true
@@ -263,7 +243,6 @@ end
 -- HALAMAN TAB & FITUR
 ---------------------------------------------------------
 local MainTabPage = CreateTab("Main")
-local TeleportTabPage = CreateTab("Teleport")
 local UpgradeTabPage = CreateTab("Upgrades")
 local EventTabPage = CreateTab("Events")
 local BossTabPage = CreateTab("World Boss")
@@ -278,47 +257,10 @@ tabs[1].Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
 CreateToggle(MainTabPage, "Anti-AFK", AntiAFKEnabled, function(v) AntiAFKEnabled = v end)
 CreateToggle(MainTabPage, "Auto Rebirth", AutoRebirthEnabled, function(v) AutoRebirthEnabled = v end)
 
--- TAB 2: Teleport
-CreateButton(TeleportTabPage, "Teleport to Grades", function()
-    local target = workspace:FindFirstChild("Grades") or workspace:FindFirstChild("GradesArea")
-    if target and target:IsA("BasePart") then
-        TeleportTo(target.CFrame * CFrame.new(0, 3, 0))
-    else
-        TeleportTo(CFrame.new(Locations.Grades))
-    end
-end)
-
-CreateButton(TeleportTabPage, "Teleport to Tower", function()
-    local target = workspace:FindFirstChild("Tower") or workspace:FindFirstChild("TowerArea")
-    if target and target:IsA("BasePart") then
-        TeleportTo(target.CFrame * CFrame.new(0, 3, 0))
-    else
-        TeleportTo(CFrame.new(Locations.Tower))
-    end
-end)
-
-CreateButton(TeleportTabPage, "Teleport to World Boss", function()
-    local target = workspace:FindFirstChild("WorldBoss") or workspace:FindFirstChild("BossArea")
-    if target and target:IsA("BasePart") then
-        TeleportTo(target.CFrame * CFrame.new(0, 3, 0))
-    else
-        TeleportTo(CFrame.new(Locations.WorldBoss))
-    end
-end)
-
-CreateButton(TeleportTabPage, "Teleport to Traits", function()
-    local target = workspace:FindFirstChild("Traits") or workspace:FindFirstChild("TraitsArea")
-    if target and target:IsA("BasePart") then
-        TeleportTo(target.CFrame * CFrame.new(0, 3, 0))
-    else
-        TeleportTo(CFrame.new(Locations.Traits))
-    end
-end)
-
--- TAB 3: Upgrades
+-- TAB 2: Upgrades
 CreateToggle(UpgradeTabPage, "Auto Upgrade All", AutoUpgradeEnabled, function(v) AutoUpgradeEnabled = v end)
 
--- TAB 4: Events
+-- TAB 3: Events
 CandyStormRemote.OnClientEvent:Connect(function(actionType, candyId, itemName, position)
     if AutoCandyEnabled and actionType == "Drop" and position then
         pcall(function()
@@ -332,151 +274,11 @@ CandyStormRemote.OnClientEvent:Connect(function(actionType, candyId, itemName, p
 end)
 CreateToggle(EventTabPage, "Auto Candy Storm", AutoCandyEnabled, function(v) AutoCandyEnabled = v end)
 
--- TAB 5: World Boss
+-- TAB 4: World Boss
 CreateToggle(BossTabPage, "Auto World Boss", AutoBossEnabled, function(v) AutoBossEnabled = v end)
 
--- TAB 6: Shop
+-- TAB 5: Shop
 CreateToggle(ShopTabPage, "Loop Auto Buy Shop", AutoBuyShopEnabled, function(v) AutoBuyShopEnabled = v end)
-CreateButton(ShopTabPage, "Beli Market (1x Instant)", function()
-    pcall(function()
-        ActionRemote:FireServer("MarketBuyAll")
-    end)
-end)"Main")
-local TeleportTabPage = CreateTab("Teleport")
-local UpgradeTabPage = CreateTab("Upgrades")
-local EventTabPage = CreateTab("Events")
-local BossTabPage = CreateTab("World Boss")
-local ShopTabPage = CreateTab("Shop")
-
--- Tab Default
-tabs[1].Page.Visible = true
-tabs[1].Btn.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
-tabs[1].Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-
--- TAB 1: Main
-CreateToggle(MainTabPage, "Anti-AFK", AntiAFKEnabled, function(v) AntiAFKEnabled = v end)
-CreateToggle(MainTabPage, "Auto Rebirth", AutoRebirthEnabled, function(v) AutoRebirthEnabled = v end)
-
--- TAB 2: Teleport (Mencari berdasarkan nama objek asli di game)
-CreateButton(TeleportTabPage, "Teleport to Grades", function()
-    TeleportToName({"Grade", "Grades", "GradeMachine", "GradeBoard"})
-end)
-
-CreateButton(TeleportTabPage, "Teleport to Tower", function()
-    TeleportToName({"Tower", "Towers", "TowerEntrance", "TowerPortal"})
-end)
-
-CreateButton(TeleportTabPage, "Teleport to World Boss", function()
-    TeleportToName({"WorldBoss", "Boss", "BossPortal", "BossArea"})
-end)
-
-CreateButton(TeleportTabPage, "Teleport to Traits", function()
-    TeleportToName({"Trait", "Traits", "TraitMachine", "TraitReroll"})
-end)
-
--- TAB 3: Upgrades
-CreateToggle(UpgradeTabPage, "Auto Upgrade All", AutoUpgradeEnabled, function(v) AutoUpgradeEnabled = v end)
-
--- TAB 4: Events
-CandyStormRemote.OnClientEvent:Connect(function(actionType, candyId, itemName, position)
-    if AutoCandyEnabled and actionType == "Drop" and position then
-        pcall(function()
-            local char = LocalPlayer.Character
-            if char and char:FindFirstChild("HumanoidRootPart") then
-                char.HumanoidRootPart.CFrame = CFrame.new(position)
-                ActionRemote:FireServer("CollectCandy", candyId)
-            end
-        end)
-    end
-end)
-CreateToggle(EventTabPage, "Auto Candy Storm", AutoCandyEnabled, function(v) AutoCandyEnabled = v end)
-
--- TAB 5: World Boss
-CreateToggle(BossTabPage, "Auto World Boss", AutoBossEnabled, function(v) AutoBossEnabled = v end)
-
--- TAB 6: Shop
-CreateToggle(ShopTabPage, "Loop Auto Buy Shop", AutoBuyShopEnabled, function(v) AutoBuyShopEnabled = v end)
-CreateButton(ShopTabPage, "Beli Market (1x Instant)", function()
-    pcall(function()
-        ActionRemote:FireServer("MarketBuyAll")
-    end)
-end)"TextButton")
-    ToggleBtn.Parent = parent
-    ToggleBtn.Size = UDim2.new(1, -5, 0, 35)
-    ToggleBtn.BackgroundColor3 = state and Color3.fromRGB(40, 150, 40) or Color3.fromRGB(150, 40, 40)
-    ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    ToggleBtn.Text = text .. " : " .. (state and "ON" or "OFF")
-    ToggleBtn.TextSize = 13
-    ToggleBtn.Font = Enum.Font.SourceSansBold
-
-    local Corner = Instance.new("UICorner", ToggleBtn)
-    Corner.CornerRadius = UDim.new(0, 6)
-
-    ToggleBtn.MouseButton1Click:Connect(function()
-        state = not state
-        ToggleBtn.BackgroundColor3 = state and Color3.fromRGB(40, 150, 40) or Color3.fromRGB(150, 40, 40)
-        ToggleBtn.Text = text .. " : " .. (state and "ON" or "OFF")
-        callback(state)
-    end)
-end
-
-local function CreateButton(parent, text, callback)
-    local Btn = Instance.new("TextButton")
-    Btn.Parent = parent
-    Btn.Size = UDim2.new(1, -5, 0, 35)
-    Btn.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
-    Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Btn.Text = text
-    Btn.TextSize = 13
-    Btn.Font = Enum.Font.SourceSansBold
-
-    local Corner = Instance.new("UICorner", Btn)
-    Corner.CornerRadius = UDim.new(0, 6)
-
-    Btn.MouseButton1Click:Connect(callback)
-end
-
--- Hal Tab & Fitur
-local MainTabPage = CreateTab("Main")
-local TeleportTabPage = CreateTab("Teleport")
-local UpgradeTabPage = CreateTab("Upgrades")
-local EventTabPage = CreateTab("Events")
-local BossTabPage = CreateTab("World Boss")
-local ShopTabPage = CreateTab("Shop")
-
-tabs[1].Page.Visible = true
-tabs[1].Btn.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
-tabs[1].Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-
-CreateToggle(MainTabPage, "Anti-AFK", AntiAFKEnabled, function(v) AntiAFKEnabled = v end)
-CreateToggle(MainTabPage, "Auto Rebirth", AutoRebirthEnabled, function(v) AutoRebirthEnabled = v end)
-
-CreateButton(TeleportTabPage, "Teleport to Grades", function() TeleportToName({"Grade", "Grades", "GradeMachine"}) end)
-CreateButton(TeleportTabPage, "Teleport to Tower", function() TeleportToName({"Tower", "Towers", "TowerEntrance"}) end)
-CreateButton(TeleportTabPage, "Teleport to World Boss", function() TeleportToName({"WorldBoss", "Boss", "BossPortal"}) end)
-CreateButton(TeleportTabPage, "Teleport to Traits", function() TeleportToName({"Trait", "Traits", "TraitMachine"}) end)
-
-CreateToggle(UpgradeTabPage, "Auto Upgrade All", AutoUpgradeEnabled, function(v) AutoUpgradeEnabled = v end)
-
-CandyStormRemote.OnClientEvent:Connect(function(actionType, candyId, itemName, position)
-    if AutoCandyEnabled and actionType == "Drop" and position then
-        pcall(function()
-            local char = LocalPlayer.Character
-            if char and char:FindFirstChild("HumanoidRootPart") then
-                char.HumanoidRootPart.CFrame = CFrame.new(position)
-                ActionRemote:FireServer("CollectCandy", candyId)
-            end
-        end)
-    end
-end)
-CreateToggle(EventTabPage, "Auto Candy Storm", AutoCandyEnabled, function(v) AutoCandyEnabled = v end)
-CreateToggle(BossTabPage, "Auto World Boss", AutoBossEnabled, function(v) AutoBossEnabled = v end)
-CreateToggle(ShopTabPage, "Loop Auto Buy Shop", AutoBuyShopEnabled, function(v) AutoBuyShopEnabled = v end)
-CreateButton(ShopTabPage, "Beli Market (1x Instant)", function()
-    pcall(function()
-        ActionRemote:FireServer("MarketBuyAll")
-    end)
-end) function(v) AutoBuyShopEnabled = v end)
 CreateButton(ShopTabPage, "Beli Market (1x Instant)", function()
     pcall(function()
         ActionRemote:FireServer("MarketBuyAll")
