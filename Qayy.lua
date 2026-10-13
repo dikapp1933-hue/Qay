@@ -2,9 +2,9 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "qayy script | Pet Dice Hub",
+   Name = "qayy script | Pet Dice Hub (Lite)",
    LoadingTitle = "Memuat qayy script...",
-   LoadingSubtitle = "Optimized Mobile Edition",
+   LoadingSubtitle = "Fixed Anti-AFK Edition",
    ConfigurationSaving = { Enabled = false }
 })
 
@@ -14,40 +14,93 @@ local PetDiceRemotes = ReplicatedStorage:WaitForChild("PetDice"):WaitForChild("R
 local ActionRemote = PetDiceRemotes:WaitForChild("Action")
 local CandyStormRemote = PetDiceRemotes:WaitForChild("CandyStorm")
 
----------------------------------------------------------
--- TAB 1: MAIN & UTILITY (ANTI-AFK & AUTO REBIRTH)
----------------------------------------------------------
-local MainTab = Window:CreateTab("Main / Utility", 4483345998)
-
+-- Status Variabel Fitur
 local AntiAFKEnabled = true
-local VirtualUser = game:GetService("VirtualUser")
+local AutoRebirthEnabled = false
+local AutoUpgradeEnabled = false
+local AutoBossEnabled = false
+local AutoBuyShopEnabled = false
+local AutoCandyEnabled = false
 
-game:GetService("Players").LocalPlayer.Idled:Connect(function()
+---------------------------------------------------------
+-- SISTEM ANTI-AFK TERPERBARUI (WORK UNTUK EXECUTOR MOBILE)
+---------------------------------------------------------
+local VirtualUser = game:GetService("VirtualUser")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local Players = game:GetService("Players")
+
+-- 1. Anti-Idle Disconnect Handler
+Players.LocalPlayer.Idled:Connect(function()
     if AntiAFKEnabled then
         VirtualUser:CaptureController()
-        VirtualUser:ClickButton2(Vector2.new())
+        VirtualUser:ClickButton2(Vector2.new(0, 0))
+        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Unknown, false, game)
     end
 end)
 
+-- 2. Anti-AFK Loop Tambahan (Simulasi Gerak/Lompat Ringan)
+task.spawn(function()
+    while true do
+        task.wait(120) -- Berjalan tiap 2 menit sekali
+        if AntiAFKEnabled then
+            pcall(function()
+                local char = Players.LocalPlayer.Character
+                if char and char:FindFirstChildOfClass("Humanoid") then
+                    -- Simulasi lompat kecil agar terdeteksi aktif oleh server
+                    char:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
+                end
+            end)
+        end
+    end
+end)
+
+---------------------------------------------------------
+-- CENTRALIZED LIGHTWEIGHT LOOP (1 LOOP SEMUA FITUR)
+---------------------------------------------------------
+task.spawn(function()
+    while task.wait(2.5) do
+        pcall(function()
+            if AutoUpgradeEnabled then
+                ActionRemote:FireServer("BuyAllUpgrades")
+                ActionRemote:FireServer("Funnel", "UpgradeTree", 1, nil)
+            end
+
+            if AutoRebirthEnabled then
+                ActionRemote:FireServer("Rebirth")
+            end
+
+            if AutoBossEnabled then
+                ActionRemote:FireServer("WorldBossJoin")
+            end
+
+            if AutoBuyShopEnabled then
+                ActionRemote:FireServer("MarketBuyAll")
+            end
+        end)
+    end
+end)
+
+---------------------------------------------------------
+-- TAB 1: MAIN & UTILITY
+---------------------------------------------------------
+local MainTab = Window:CreateTab("Main / Utility", 4483345998)
+
 MainTab:CreateToggle({
-   Name = "Anti-AFK (Anti Disconnect)",
+   Name = "Anti-AFK (Fix Anti Disconnect)",
    CurrentValue = true,
    Flag = "AntiAFKToggle",
    Callback = function(Value)
       AntiAFKEnabled = Value
+      if AntiAFKEnabled then
+          Rayfield:Notify({
+             Title = "qayy script",
+             Content = "Anti-AFK Aktif!",
+             Duration = 2,
+             Image = 4483345998,
+          })
+      end
    end,
 })
-
-local AutoRebirthEnabled = false
-
-local function startAutoRebirth()
-    while AutoRebirthEnabled do
-        pcall(function()
-            ActionRemote:FireServer("Rebirth")
-        end)
-        task.wait(2)
-    end
-end
 
 MainTab:CreateToggle({
    Name = "Auto Rebirth (On/Off)",
@@ -55,22 +108,6 @@ MainTab:CreateToggle({
    Flag = "AutoRebirthToggle",
    Callback = function(Value)
       AutoRebirthEnabled = Value
-      if AutoRebirthEnabled then
-          Rayfield:Notify({
-             Title = "qayy script",
-             Content = "Auto Rebirth Aktif!",
-             Duration = 2,
-             Image = 4483345998,
-          })
-          task.spawn(startAutoRebirth)
-      else
-          Rayfield:Notify({
-             Title = "qayy script",
-             Content = "Auto Rebirth Dimatikan.",
-             Duration = 2,
-             Image = 4483345998,
-          })
-      end
    end,
 })
 
@@ -79,34 +116,12 @@ MainTab:CreateToggle({
 ---------------------------------------------------------
 local UpgradeTab = Window:CreateTab("Auto Upgrades", 4483345998)
 
-local AutoUpgradeEnabled = false
-
-local function startAutoUpgrade()
-    while AutoUpgradeEnabled do
-        pcall(function()
-            ActionRemote:FireServer("BuyAllUpgrades")
-            ActionRemote:FireServer("Funnel", "UpgradeTree", 1, nil)
-            ActionRemote:FireServer("Funnel", "Dice", 1, nil)
-        end)
-        task.wait(1.5)
-    end
-end
-
 UpgradeTab:CreateToggle({
    Name = "Auto Upgrade All (Buy All & Tree)",
    CurrentValue = false,
    Flag = "AutoUpgradeToggle",
    Callback = function(Value)
       AutoUpgradeEnabled = Value
-      if AutoUpgradeEnabled then
-          Rayfield:Notify({
-             Title = "qayy script",
-             Content = "Auto Upgrade Aktif!",
-             Duration = 2,
-             Image = 4483345998,
-          })
-          task.spawn(startAutoUpgrade)
-      end
    end,
 })
 
@@ -115,19 +130,16 @@ UpgradeTab:CreateToggle({
 ---------------------------------------------------------
 local EventTab = Window:CreateTab("Candy Storm", 4483345998)
 
-local AutoCandyEnabled = false
-
 CandyStormRemote.OnClientEvent:Connect(function(actionType, candyId, itemName, position)
     if AutoCandyEnabled and actionType == "Drop" and position then
         pcall(function()
-            local player = game.Players.LocalPlayer
+            local player = Players.LocalPlayer
             local character = player.Character or player.CharacterAdded:Wait()
             local hrp = character:FindFirstChild("HumanoidRootPart")
             
             if hrp then
                 hrp.CFrame = CFrame.new(position)
                 ActionRemote:FireServer("CollectCandy", candyId)
-                ActionRemote:FireServer("CollectItem", candyId)
             end
         end)
     end
@@ -147,80 +159,26 @@ EventTab:CreateToggle({
 ---------------------------------------------------------
 local BossTab = Window:CreateTab("World Boss", 4483345998)
 
-local AutoBossEnabled = false
-
-local function startAutoBoss()
-    while AutoBossEnabled do
-        pcall(function()
-            ActionRemote:FireServer("WorldBossJoin")
-        end)
-        task.wait(2)
-    end
-end
-
 BossTab:CreateToggle({
    Name = "Auto Join World Boss",
    CurrentValue = false,
    Flag = "AutoBossToggle",
    Callback = function(Value)
       AutoBossEnabled = Value
-      if AutoBossEnabled then
-          task.spawn(startAutoBoss)
-      end
    end,
 })
 
 ---------------------------------------------------------
--- TAB 5: MARKET & SHOP (LOOP AUTO BUY)
+-- TAB 5: MARKET & SHOP
 ---------------------------------------------------------
 local ShopTab = Window:CreateTab("Market & Shop", 4483345998)
 
-local AutoBuyShopEnabled = false
-local BuyInterval = 2 -- Jeda waktu per loop dalam detik
-
-local function startAutoBuyShop()
-    while AutoBuyShopEnabled do
-        pcall(function()
-            ActionRemote:FireServer("MarketBuyAll")
-        end)
-        task.wait(BuyInterval)
-    end
-end
-
 ShopTab:CreateToggle({
-   Name = "Loop Auto Buy Shop (On/Off)",
+   Name = "Auto Buy Shop (On/Off)",
    CurrentValue = false,
    Flag = "LoopAutoBuyToggle",
    Callback = function(Value)
       AutoBuyShopEnabled = Value
-      if AutoBuyShopEnabled then
-          Rayfield:Notify({
-             Title = "qayy script",
-             Content = "Loop Auto Buy Shop Aktif!",
-             Duration = 2,
-             Image = 4483345998,
-          })
-          task.spawn(startAutoBuyShop)
-      else
-          Rayfield:Notify({
-             Title = "qayy script",
-             Content = "Loop Auto Buy Shop Dimatikan.",
-             Duration = 2,
-             Image = 4483345998,
-          })
-      end
-   end,
-})
-
-ShopTab:CreateSlider({
-   Name = "Kecepatan Loop (Detik)",
-   Range = {1, 30},
-   Increment = 1,
-   Suffix = "Detik",
-   CurrentValue = 2,
-   Flag = "ShopLoopIntervalSlider",
-   Callback = function(Value)
-      BuyInterval = Value
    end,
 })
 
@@ -234,11 +192,11 @@ ShopTab:CreateButton({
 })
 
 ---------------------------------------------------------
--- NOTIFIKASI SCRIPT SIAP
+-- NOTIFIKASI
 ---------------------------------------------------------
 Rayfield:Notify({
-   Title = "qayy script Siap!",
-   Content = "Loop Auto Buy Shop berhasil dipasang.",
-   Duration = 4,
+   Title = "qayy script Loaded!",
+   Content = "Anti-AFK berhasil diperbaiki.",
+   Duration = 3,
    Image = 4483345998,
 })
