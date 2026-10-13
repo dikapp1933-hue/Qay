@@ -4,7 +4,7 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local Window = Rayfield:CreateWindow({
    Name = "qayy script | Pet Dice Hub",
    LoadingTitle = "Memuat qayy script...",
-   LoadingSubtitle = "by Delta Executor",
+   LoadingSubtitle = "Vertical UI Layout",
    ConfigurationSaving = { Enabled = false }
 })
 
@@ -15,9 +15,14 @@ local ActionRemote = PetDiceRemotes:WaitForChild("Action")
 local CandyStormRemote = PetDiceRemotes:WaitForChild("CandyStorm")
 
 ---------------------------------------------------------
--- TAB 1: MAIN & ANTI-AFK
+-- TAB UTAMA: ALL FEATURES (VERTUKAL / ATAS KE BAWAH)
 ---------------------------------------------------------
-local MainTab = Window:CreateTab("Main / Utility", 4483345998)
+local MainTab = Window:CreateTab("Main Menu", 4483345998)
+
+---------------------------------------------------------
+-- SECTION 1: UTILITY & PROTECTION
+---------------------------------------------------------
+MainTab:CreateSection("--- UTILITY & UTAMA ---")
 
 local AntiAFKEnabled = true
 local VirtualUser = game:GetService("VirtualUser")
@@ -37,29 +42,37 @@ MainTab:CreateToggle({
       AntiAFKEnabled = Value
       if AntiAFKEnabled then
           Rayfield:Notify({
-             Title = "qayy script | Anti-AFK",
-             Content = "Kamu tidak akan terkeluar (kick) saat AFK lama.",
-             Duration = 3,
-             Image = 4483345998,
-          })
-      else
-          Rayfield:Notify({
-             Title = "qayy script | Anti-AFK",
-             Content = "Sistem perlindungan AFK dinonaktifkan.",
-             Duration = 3,
+             Title = "qayy script",
+             Content = "Anti-AFK Aktif!",
+             Duration = 2,
              Image = 4483345998,
           })
       end
    end,
 })
 
+MainTab:CreateButton({
+   Name = "Equip Best (Pakai Best Pet/Dice)",
+   Callback = function()
+      pcall(function()
+          ActionRemote:FireServer("EquipBest")
+          Rayfield:Notify({
+             Title = "qayy script",
+             Content = "Berhasil memakai equipment terbaik!",
+             Duration = 2,
+             Image = 4483345998,
+          })
+      end)
+   end,
+})
+
 ---------------------------------------------------------
--- TAB 2: CANDY STORM / EVENT COLLECTOR
+-- SECTION 2: CANDY STORM EVENT
 ---------------------------------------------------------
-local EventTab = Window:CreateTab("Candy Storm", 4483345998)
+MainTab:CreateSection("--- CANDY STORM EVENT ---")
+
 local AutoCandyEnabled = false
 
--- Listener untuk Auto Collect Candy Storm (CandyBag, CandyCorn, dll)
 CandyStormRemote.OnClientEvent:Connect(function(actionType, candyId, itemName, position)
     if AutoCandyEnabled and actionType == "Drop" and position then
         pcall(function()
@@ -68,18 +81,15 @@ CandyStormRemote.OnClientEvent:Connect(function(actionType, candyId, itemName, p
             local hrp = character:FindFirstChild("HumanoidRootPart")
             
             if hrp then
-                -- Teleport langsung ke lokasi item yang jatuh
                 hrp.CFrame = CFrame.new(position)
                 
-                -- Notifikasi singkat tentang item yang diambil
                 Rayfield:Notify({
-                   Title = "qayy script | Candy Collected",
+                   Title = "qayy script",
                    Content = "Mengambil " .. tostring(itemName) .. "!",
                    Duration = 1.5,
                    Image = 4483345998,
                 })
 
-                -- Memanggil remote action pengumpulan item jika server membutuhkannya
                 ActionRemote:FireServer("CollectCandy", candyId)
                 ActionRemote:FireServer("CollectItem", candyId)
             end
@@ -87,34 +97,20 @@ CandyStormRemote.OnClientEvent:Connect(function(actionType, candyId, itemName, p
     end
 end)
 
-EventTab:CreateToggle({
-   Name = "Auto Collect Candy Storm (Bag & Corn)",
+MainTab:CreateToggle({
+   Name = "Auto Collect Candy Storm",
    CurrentValue = false,
    Flag = "AutoCandyToggle",
    Callback = function(Value)
       AutoCandyEnabled = Value
-      if AutoCandyEnabled then
-          Rayfield:Notify({
-             Title = "qayy script | Candy Storm",
-             Content = "Auto Collect Aktif! Akan mengambil CandyBag & CandyCorn.",
-             Duration = 3,
-             Image = 4483345998,
-          })
-      else
-          Rayfield:Notify({
-             Title = "qayy script | Candy Storm",
-             Content = "Auto Collect Candy Storm Dimatikan.",
-             Duration = 3,
-             Image = 4483345998,
-          })
-      end
    end,
 })
 
 ---------------------------------------------------------
--- TAB 3: WORLD BOSS
+-- SECTION 3: WORLD BOSS
 ---------------------------------------------------------
-local BossTab = Window:CreateTab("World Boss", 4483345998)
+MainTab:CreateSection("--- WORLD BOSS ---")
+
 local AutoBossEnabled = false
 
 local function startAutoBoss()
@@ -126,35 +122,94 @@ local function startAutoBoss()
     end
 end
 
-BossTab:CreateToggle({
+MainTab:CreateToggle({
    Name = "Auto Join World Boss",
    CurrentValue = false,
    Flag = "AutoBossToggle",
    Callback = function(Value)
       AutoBossEnabled = Value
       if AutoBossEnabled then
-          Rayfield:Notify({
-             Title = "qayy script | World Boss",
-             Content = "Mencoba masuk ke World Boss...",
-             Duration = 3,
-             Image = 4483345998,
-          })
           task.spawn(startAutoBoss)
-      else
-          Rayfield:Notify({
-             Title = "qayy script | World Boss",
-             Content = "Fitur dimatikan.",
-             Duration = 3,
-             Image = 4483345998,
-          })
       end
    end,
 })
 
 ---------------------------------------------------------
--- TAB 4: MARKET / SHOP
+-- SECTION 4: AUTO CLAIM & UPGRADES
 ---------------------------------------------------------
-local ShopTab = Window:CreateTab("Market & Shop", 4483345998)
+MainTab:CreateSection("--- AUTO CLAIM & UPGRADE ---")
+
+local AutoClaimEnabled = false
+local AutoUpgradeEnabled = false
+
+local function startAutoClaim()
+    while AutoClaimEnabled do
+        pcall(function()
+            -- Daily & Weekly Quest Claim
+            ActionRemote:FireServer("QuestClaim", "Daily", 1)
+            ActionRemote:FireServer("QuestClaim", "Weekly", 1)
+            
+            -- Goals Claim (Halloween & Infinity25)
+            ActionRemote:FireServer("HalloweenGoalClaim", "Minutes")
+            ActionRemote:FireServer("GoalClaim", "infinity25")
+            
+            -- Playtime Rewards Claim (Slot 1-12)
+            for i = 1, 12 do
+                ActionRemote:FireServer("ClaimPlaytime", i)
+            end
+        end)
+        task.wait(5)
+    end
+end
+
+local function startAutoUpgrade()
+    while AutoUpgradeEnabled do
+        pcall(function()
+            ActionRemote:FireServer("Funnel", "UpgradeTree", 1, nil)
+            ActionRemote:FireServer("Funnel", "Dice", 1, nil)
+        end)
+        task.wait(3)
+    end
+end
+
+MainTab:CreateToggle({
+   Name = "Auto Claim All (Daily, Weekly, Goals, Playtime)",
+   CurrentValue = false,
+   Flag = "AutoClaimToggle",
+   Callback = function(Value)
+      AutoClaimEnabled = Value
+      if AutoClaimEnabled then
+          task.spawn(startAutoClaim)
+      end
+   end,
+})
+
+MainTab:CreateToggle({
+   Name = "Auto Upgrade (Tree & Dice)",
+   CurrentValue = false,
+   Flag = "AutoUpgradeToggle",
+   Callback = function(Value)
+      AutoUpgradeEnabled = Value
+      if AutoUpgradeEnabled then
+          task.spawn(startAutoUpgrade)
+      end
+   end,
+})
+
+MainTab:CreateButton({
+   Name = "Rebirth Instant (1x)",
+   Callback = function()
+      pcall(function()
+          ActionRemote:FireServer("Funnel", "Rebirth", 2, nil)
+      end)
+   end,
+})
+
+---------------------------------------------------------
+-- SECTION 5: MARKET & SHOP
+---------------------------------------------------------
+MainTab:CreateSection("--- MARKET & SHOP ---")
+
 local AutoBuyAllEnabled = false
 
 local function startAutoBuyAll()
@@ -166,52 +221,39 @@ local function startAutoBuyAll()
     end
 end
 
-ShopTab:CreateButton({
-   Name = "Beli Semua Item Market Sekarang (1x)",
+MainTab:CreateButton({
+   Name = "Beli Semua Item Market (1x)",
    Callback = function()
       pcall(function()
           ActionRemote:FireServer("MarketBuyAll")
           Rayfield:Notify({
-             Title = "qayy script | Market",
-             Content = "Berhasil mengirim perintah MarketBuyAll!",
-             Duration = 3,
+             Title = "qayy script",
+             Content = "Market Buy All terisi!",
+             Duration = 2,
              Image = 4483345998,
           })
       end)
    end,
 })
 
-ShopTab:CreateToggle({
+MainTab:CreateToggle({
    Name = "Auto Buy All Market (Loop)",
    CurrentValue = false,
    Flag = "AutoBuyAllToggle",
    Callback = function(Value)
       AutoBuyAllEnabled = Value
       if AutoBuyAllEnabled then
-          Rayfield:Notify({
-             Title = "qayy script | Market",
-             Content = "Membeli semua item di market secara otomatis...",
-             Duration = 3,
-             Image = 4483345998,
-          })
           task.spawn(startAutoBuyAll)
-      else
-          Rayfield:Notify({
-             Title = "qayy script | Market",
-             Content = "Fitur dimatikan.",
-             Duration = 3,
-             Image = 4483345998,
-          })
       end
    end,
 })
 
 ---------------------------------------------------------
--- NOTIFIKASI SCRIPT SIAP
+-- NOTIFIKASI
 ---------------------------------------------------------
 Rayfield:Notify({
-   Title = "qayy script Berhasil Dimuat!",
-   Content = "Anti-AFK, Candy Storm, World Boss, dan Market Siap Digunakan.",
-   Duration = 5,
+   Title = "qayy script Dimuat!",
+   Content = "Weekly Quest & Infinity25 Goal sudah ditambahkan.",
+   Duration = 4,
    Image = 4483345998,
 })
