@@ -1,4 +1,4 @@
--- Destroy UI Lama jika ada
+-- Destroy UI Lama jika ada (Mencegah Menumpuk)
 if game:GetService("CoreGui"):FindFirstChild("qayyScriptHub") then
     game:GetService("CoreGui").qayyScriptHub:Destroy()
 end
@@ -34,7 +34,7 @@ local ActiveCandies = {}
 local IsProcessingCandy = false
 
 ---------------------------------------------------------
--- ANTI-AFK SAFE (BEBAS DARI KICK)
+-- ANTI-AFK SAFE
 ---------------------------------------------------------
 LocalPlayer.Idled:Connect(function()
     if AntiAFKEnabled then
@@ -46,7 +46,7 @@ LocalPlayer.Idled:Connect(function()
 end)
 
 ---------------------------------------------------------
--- CENTRAL LOOP UTAMA (2.5 DETIK - LITE & AMAN)
+-- CENTRAL LOOP UTAMA (2.5 DETIK)
 ---------------------------------------------------------
 task.spawn(function()
     while true do
@@ -93,21 +93,28 @@ local function GetTargetPosition(possibleNames)
 end
 
 ---------------------------------------------------------
--- LOOP KHUSUS AUTO BOSS (PHYSICAL WALK-IN ONLY - 100% NO KICK)
+-- LOOP SAFE AUTO BOSS
 ---------------------------------------------------------
 task.spawn(function()
     while true do
-        task.wait(5) -- Cek rutin tiap 5 detik
+        task.wait(3)
         if AutoBossEnabled then
             pcall(function()
                 local char = LocalPlayer.Character
                 if char then
+                    local hrp = char:FindFirstChild("HumanoidRootPart")
                     local humanoid = char:FindFirstChildOfClass("Humanoid")
-                    local bossPos = GetTargetPosition({"WorldBoss", "Boss", "BossPortal", "BossArea", "BossPad"})
+                    local bossPos = GetTargetPosition({"WorldBoss", "Boss", "BossPortal", "BossArea"})
 
-                    if humanoid and bossPos then
-                        -- Karakter berjalan fisik secara alami persis ke atas pad boss
-                        humanoid:MoveTo(bossPos)
+                    if hrp and humanoid and bossPos then
+                        local distance = (hrp.Position - bossPos).Magnitude
+                        if distance > 25 then
+                            humanoid:MoveTo(bossPos)
+                        else
+                            if ActionRemote then
+                                ActionRemote:FireServer("WorldBossJoin")
+                            end
+                        end
                     end
                 end
             end)
@@ -116,7 +123,7 @@ task.spawn(function()
 end)
 
 ---------------------------------------------------------
--- LOGIKA SMART CANDY (CARI PERMEN TERDEKAT)
+-- LOGIKA SMART CANDY (CARI PERMEN TERDEKAT & BIFOKUS SAMPAI KENA)
 ---------------------------------------------------------
 local function ProcessCandyQueue()
     if IsProcessingCandy then return end
@@ -132,6 +139,7 @@ local function ProcessCandyQueue()
 
             if not hrp or not humanoid then break end
 
+            -- 1. Cari permen yang lokasinya paling dekat dengan karakter saat ini
             local closestIndex = nil
             local closestDist = math.huge
 
@@ -143,23 +151,29 @@ local function ProcessCandyQueue()
                 end
             end
 
+            -- Jika tidak ada permen tersisa, keluar dari loop
             if not closestIndex then break end
 
+            -- Ambil permen terdekat dari daftar
             local currentTarget = table.remove(ActiveCandies, closestIndex)
             local candyId = currentTarget.candyId
             local targetPos = currentTarget.position
 
+            -- 2. Perintahkan karakter berjalan ke posisi permen
             humanoid:MoveTo(targetPos)
 
+            -- 3. Tunggu sampai benar-benar mendekat (Jarak <= 3.5 stud)
             local startTime = tick()
-            while tick() - startTime < 6 do
+            while tick() - startTime < 6 do -- Toleransi waktu jalan max 6 detik
                 if not AutoCandyEnabled then break end
                 
                 local currentDist = (hrp.Position - targetPos).Magnitude
                 if currentDist <= 3.5 then
+                    -- Sudah sangat dekat dengan permen!
                     break
                 end
                 
+                -- Jika karakter berhenti mendadak sebelum sampai, perintahkan jalan lagi
                 if humanoid.MoveDirection.Magnitude == 0 then
                     humanoid:MoveTo(targetPos)
                 end
@@ -167,13 +181,14 @@ local function ProcessCandyQueue()
                 task.wait(0.1)
             end
 
+            -- 4. Kirim remote eksekusi ambil permen
             if ActionRemote then
                 pcall(function()
                     ActionRemote:FireServer("CollectCandy", candyId)
                 end)
             end
 
-            task.wait(0.15)
+            task.wait(0.15) -- Jeda kecil sebelum lanjut mencari permen terdekat berikutnya
         end
 
         IsProcessingCandy = false
@@ -415,7 +430,7 @@ CreateToggle(EventTabPage, "Smart Auto Candy", AutoCandyEnabled, function(v)
     end
 end)
 
-CreateToggle(BossTabPage, "Auto Walk To Boss", AutoBossEnabled, function(v) AutoBossEnabled = v end)
+CreateToggle(BossTabPage, "Auto World Boss", AutoBossEnabled, function(v) AutoBossEnabled = v end)
 CreateToggle(ShopTabPage, "Loop Auto Buy Shop", AutoBuyShopEnabled, function(v) AutoBuyShopEnabled = v end)
 CreateButton(ShopTabPage, "Beli Market (1x Instant)", function()
     pcall(function()
