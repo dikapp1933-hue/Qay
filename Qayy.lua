@@ -1,4 +1,4 @@
--- Destroy UI Lama jika ada (Mencegah Menumpuk)
+-- Destroy UI Lama jika ada
 if game:GetService("CoreGui"):FindFirstChild("qayyScriptHub") then
     game:GetService("CoreGui").qayyScriptHub:Destroy()
 end
@@ -8,7 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VirtualUser = game:GetService("VirtualUser")
 local LocalPlayer = Players.LocalPlayer
 
--- Safely Find Remotes (Mencegah Infinite Yield / Script Macet)
+-- Safely Find Remotes
 local ActionRemote, CandyStormRemote
 pcall(function()
     local PetDiceFolder = ReplicatedStorage:FindFirstChild("PetDice")
@@ -29,8 +29,12 @@ local AutoBossEnabled = false
 local AutoBuyShopEnabled = false
 local AutoCandyEnabled = false
 
+-- Antrean & Map Permen
+local ActiveCandies = {}
+local IsProcessingCandy = false
+
 ---------------------------------------------------------
--- ANTI-AFK STABIL
+-- ANTI-AFK SAFE (BEBAS DARI KICK)
 ---------------------------------------------------------
 LocalPlayer.Idled:Connect(function()
     if AntiAFKEnabled then
@@ -41,21 +45,8 @@ LocalPlayer.Idled:Connect(function()
     end
 end)
 
-task.spawn(function()
-    while task.wait(60) do
-        if AntiAFKEnabled then
-            pcall(function()
-                local char = LocalPlayer.Character
-                if char and char:FindFirstChild("HumanoidRootPart") then
-                    char.HumanoidRootPart.CFrame = char.HumanoidRootPart.CFrame * CFrame.new(0, 0.05, 0)
-                end
-            end)
-        end
-    end
-end)
-
 ---------------------------------------------------------
--- CENTRAL LOOP (2.5 DETIK)
+-- CENTRAL LOOP UTAMA (2.5 DETIK - LITE & AMAN)
 ---------------------------------------------------------
 task.spawn(function()
     while true do
@@ -69,9 +60,6 @@ task.spawn(function()
                 if AutoRebirthEnabled then
                     ActionRemote:FireServer("Rebirth")
                 end
-                if AutoBossEnabled then
-                    ActionRemote:FireServer("WorldBossJoin")
-                end
                 if AutoBuyShopEnabled then
                     ActionRemote:FireServer("MarketBuyAll")
                 end
@@ -81,36 +69,131 @@ task.spawn(function()
 end)
 
 ---------------------------------------------------------
--- FUNGSI TELEPORT SMART SEARCH
+-- FUNGSI MENCARI POSISI OBJEK DI WORKSPACE
 ---------------------------------------------------------
-local function TeleportToName(possibleNames)
+local function GetTargetPosition(possibleNames)
+    local targetPos = nil
     pcall(function()
-        local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
-
-        local targetPart = nil
         for _, obj in ipairs(workspace:GetDescendants()) do
             for _, name in ipairs(possibleNames) do
                 if string.lower(obj.Name) == string.lower(name) and (obj:IsA("BasePart") or obj:IsA("Model")) then
-                    targetPart = obj
+                    if obj:IsA("Model") then
+                        local primary = obj.PrimaryPart or obj:FindFirstChildOfClass("BasePart")
+                        if primary then targetPos = primary.Position end
+                    elseif obj:IsA("BasePart") then
+                        targetPos = obj.Position
+                    end
                     break
                 end
             end
-            if targetPart then break end
-        end
-
-        if targetPart then
-            if targetPart:IsA("Model") then
-                local primary = targetPart.PrimaryPart or targetPart:FindFirstChildOfClass("BasePart")
-                if primary then
-                    hrp.CFrame = primary.CFrame * CFrame.new(0, 3, 0)
-                end
-            elseif targetPart:IsA("BasePart") then
-                hrp.CFrame = targetPart.CFrame * CFrame.new(0, 3, 0)
-            end
+            if targetPos then break end
         end
     end)
+    return targetPos
+end
+
+---------------------------------------------------------
+-- LOOP KHUSUS AUTO BOSS (PHYSICAL WALK-IN ONLY - 100% NO KICK)
+---------------------------------------------------------
+task.spawn(function()
+    while true do
+        task.wait(5) -- Cek rutin tiap 5 detik
+        if AutoBossEnabled then
+            pcall(function()
+                local char = LocalPlayer.Character
+                if char then
+                    local humanoid = char:FindFirstChildOfClass("Humanoid")
+                    local bossPos = GetTargetPosition({"WorldBoss", "Boss", "BossPortal", "BossArea", "BossPad"})
+
+                    if humanoid and bossPos then
+                        -- Karakter berjalan fisik secara alami persis ke atas pad boss
+                        humanoid:MoveTo(bossPos)
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+---------------------------------------------------------
+-- LOGIKA SMART CANDY (CARI PERMEN TERDEKAT)
+---------------------------------------------------------
+local function ProcessCandyQueue()
+    if IsProcessingCandy then return end
+    IsProcessingCandy = true
+
+    task.spawn(function()
+        while AutoCandyEnabled do
+            local char = LocalPlayer.Character
+            if not char then break end
+            
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+
+            if not hrp or not humanoid then break end
+
+            local closestIndex = nil
+            local closestDist = math.huge
+
+            for i, data in ipairs(ActiveCandies) do
+                local dist = (hrp.Position - data.position).Magnitude
+                if dist < closestDist then
+                    closestDist = dist
+                    closestIndex = i
+                end
+            end
+
+            if not closestIndex then break end
+
+            local currentTarget = table.remove(ActiveCandies, closestIndex)
+            local candyId = currentTarget.candyId
+            local targetPos = currentTarget.position
+
+            humanoid:MoveTo(targetPos)
+
+            local startTime = tick()
+            while tick() - startTime < 6 do
+                if not AutoCandyEnabled then break end
+                
+                local currentDist = (hrp.Position - targetPos).Magnitude
+                if currentDist <= 3.5 then
+                    break
+                end
+                
+                if humanoid.MoveDirection.Magnitude == 0 then
+                    humanoid:MoveTo(targetPos)
+                end
+                
+                task.wait(0.1)
+            end
+
+            if ActionRemote then
+                pcall(function()
+                    ActionRemote:FireServer("CollectCandy", candyId)
+                end)
+            end
+
+            task.wait(0.15)
+        end
+
+        IsProcessingCandy = false
+    end)
+end
+
+---------------------------------------------------------
+-- FUNGSI TELEPORT SAFE
+---------------------------------------------------------
+local function TeleportToName(possibleNames)
+    local pos = GetTargetPosition(possibleNames)
+    if pos then
+        pcall(function()
+            local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                hrp.CFrame = CFrame.new(pos) * CFrame.new(0, 4, 0)
+            end
+        end)
+    end
 end
 
 ---------------------------------------------------------
@@ -143,7 +226,7 @@ StrokeLuffy.Color = Color3.fromRGB(255, 255, 255)
 StrokeLuffy.Thickness = 2
 
 ---------------------------------------------------------
--- 2. FRAME UTAMA SCRIPT (LANGSUNG TERBUKA)
+-- 2. FRAME UTAMA SCRIPT
 ---------------------------------------------------------
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
@@ -154,7 +237,7 @@ MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
-MainFrame.Visible = true -- Langsung aktif tanpa key
+MainFrame.Visible = true
 
 local CornerFrame = Instance.new("UICorner", MainFrame)
 CornerFrame.CornerRadius = UDim.new(0, 10)
@@ -310,27 +393,29 @@ CreateToggle(MainTabPage, "Auto Rebirth", AutoRebirthEnabled, function(v) AutoRe
 
 CreateButton(TeleportTabPage, "Teleport to Grades", function() TeleportToName({"Grade", "Grades", "GradeMachine"}) end)
 CreateButton(TeleportTabPage, "Teleport to Tower", function() TeleportToName({"Tower", "Towers", "TowerEntrance"}) end)
-CreateButton(TeleportTabPage, "Teleport to WorldBoss", function() TeleportToName({"WorldBoss", "Boss", "BossPortal"}) end)
+CreateButton(TeleportTabPage, "Teleport to World Boss", function() TeleportToName({"WorldBoss", "Boss", "BossPortal"}) end)
 CreateButton(TeleportTabPage, "Teleport to Traits", function() TeleportToName({"Trait", "Traits", "TraitMachine"}) end)
 
 CreateToggle(UpgradeTabPage, "Auto Upgrade All", AutoUpgradeEnabled, function(v) AutoUpgradeEnabled = v end)
 
+-- DETEKSI EVENT PERMEN JATUH
 if CandyStormRemote then
     CandyStormRemote.OnClientEvent:Connect(function(actionType, candyId, itemName, position)
         if AutoCandyEnabled and actionType == "Drop" and position then
-            pcall(function()
-                local char = LocalPlayer.Character
-                if char and char:FindFirstChild("HumanoidRootPart") then
-                    char.HumanoidRootPart.CFrame = CFrame.new(position)
-                    if ActionRemote then ActionRemote:FireServer("CollectCandy", candyId) end
-                end
-            end)
+            table.insert(ActiveCandies, {candyId = candyId, position = position})
+            ProcessCandyQueue()
         end
     end)
 end
 
-CreateToggle(EventTabPage, "Auto Candy Storm", AutoCandyEnabled, function(v) AutoCandyEnabled = v end)
-CreateToggle(BossTabPage, "Auto World Boss", AutoBossEnabled, function(v) AutoBossEnabled = v end)
+CreateToggle(EventTabPage, "Smart Auto Candy", AutoCandyEnabled, function(v) 
+    AutoCandyEnabled = v 
+    if not v then
+        ActiveCandies = {}
+    end
+end)
+
+CreateToggle(BossTabPage, "Auto Walk To Boss", AutoBossEnabled, function(v) AutoBossEnabled = v end)
 CreateToggle(ShopTabPage, "Loop Auto Buy Shop", AutoBuyShopEnabled, function(v) AutoBuyShopEnabled = v end)
 CreateButton(ShopTabPage, "Beli Market (1x Instant)", function()
     pcall(function()
